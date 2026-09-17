@@ -459,6 +459,15 @@ const ArduinoBlockly = (function() {
         await simulationEngine.start();
         this.showStatus('Simulation started!', 'success', 2500);
 
+        // Let a hosting page (e.g. an embedding lesson) know a run happened,
+        // and whether the circuit was healthy at that moment.
+        if (window.parent && window.parent !== window) {
+          const healthy = !window.circuitHealthChecker || window.circuitHealthChecker.issues.length === 0;
+          try {
+            window.parent.postMessage({ source: 'irieblocky', type: 'simStarted', healthy }, '*');
+          } catch (e) {}
+        }
+
         // Launch block interpreter asynchronously (does not block browser)
         simRunner.run(workspace).catch((err) => {
           if (err.name !== 'AbortError') {
@@ -1036,6 +1045,236 @@ void loop() {
     pixels.show();
     delay(100);
   }
+}`;
+          break;
+        }
+
+        case 'button_input': {
+          desc = 'Pushbutton Input -> LED Output';
+          const uno = canvas.addComponent('wokwi-arduino-uno', 50, 60);
+          const btn = canvas.addComponent('wokwi-pushbutton', 380, 70);
+          const res = canvas.addComponent('wokwi-resistor', 480, 180, { value: 220 });
+          const led = canvas.addComponent('wokwi-led', 560, 180, { color: 'red' });
+
+          canvas.netlist.addWire({ compId: btn.id, pin: '1.l' }, { compId: uno.id, pin: '2' }, '#38a169');
+          canvas.netlist.addWire({ compId: btn.id, pin: '2.l' }, { compId: uno.id, pin: 'GND.1' }, '#1a202c');
+          canvas.netlist.addWire({ compId: uno.id, pin: '13' }, { compId: res.id, pin: '1' }, '#805ad5');
+          canvas.netlist.addWire({ compId: res.id, pin: '2' }, { compId: led.id, pin: 'A' }, '#805ad5');
+          canvas.netlist.addWire({ compId: led.id, pin: 'C' }, { compId: uno.id, pin: 'GND.2' }, '#1a202c');
+          canvas.renderWires();
+
+          code = `const int buttonPin = 2;
+const int ledPin = 13;
+
+void setup() {
+  pinMode(buttonPin, INPUT_PULLUP); // Button connects pin 2 to GND when pressed
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  int pressed = digitalRead(buttonPin) == LOW; // LOW means pressed
+  digitalWrite(ledPin, pressed ? HIGH : LOW);
+}`;
+          break;
+        }
+
+        case 'random_logic': {
+          desc = 'Random Logic: 3-LED Light Chaser';
+          const uno = canvas.addComponent('wokwi-arduino-uno', 50, 60);
+          const r1 = canvas.addComponent('wokwi-resistor', 400, 110, { value: 220 });
+          const r2 = canvas.addComponent('wokwi-resistor', 400, 150, { value: 220 });
+          const r3 = canvas.addComponent('wokwi-resistor', 400, 190, { value: 220 });
+          const d1 = canvas.addComponent('wokwi-led', 480, 110, { color: 'red' });
+          const d2 = canvas.addComponent('wokwi-led', 480, 150, { color: 'gold' });
+          const d3 = canvas.addComponent('wokwi-led', 480, 190, { color: 'blue' });
+
+          canvas.netlist.addWire({ compId: uno.id, pin: '2' }, { compId: r1.id, pin: '1' }, '#e53e3e');
+          canvas.netlist.addWire({ compId: uno.id, pin: '3' }, { compId: r2.id, pin: '1' }, '#d69e2e');
+          canvas.netlist.addWire({ compId: uno.id, pin: '4' }, { compId: r3.id, pin: '1' }, '#3182ce');
+          canvas.netlist.addWire({ compId: r1.id, pin: '2' }, { compId: d1.id, pin: 'A' }, '#e53e3e');
+          canvas.netlist.addWire({ compId: r2.id, pin: '2' }, { compId: d2.id, pin: 'A' }, '#d69e2e');
+          canvas.netlist.addWire({ compId: r3.id, pin: '2' }, { compId: d3.id, pin: 'A' }, '#3182ce');
+          canvas.netlist.addWire({ compId: d1.id, pin: 'C' }, { compId: uno.id, pin: 'GND.1' }, '#1a202c');
+          canvas.netlist.addWire({ compId: d2.id, pin: 'C' }, { compId: uno.id, pin: 'GND.1' }, '#1a202c');
+          canvas.netlist.addWire({ compId: d3.id, pin: 'C' }, { compId: uno.id, pin: 'GND.1' }, '#1a202c');
+          canvas.renderWires();
+
+          code = `const int ledPins[3] = {2, 3, 4};
+
+void setup() {
+  randomSeed(analogRead(A0)); // Unconnected pin noise seeds the randomizer
+  for (int i = 0; i < 3; i++) {
+    pinMode(ledPins[i], OUTPUT);
+  }
+}
+
+void loop() {
+  int choice = random(0, 3); // random(min, max) -> 0, 1, or 2
+  digitalWrite(ledPins[choice], HIGH);
+  delay(200);
+  digitalWrite(ledPins[choice], LOW);
+  delay(100);
+}`;
+          break;
+        }
+
+        case 'buzzer_melody': {
+          desc = 'Buzzer Melody Player';
+          const uno = canvas.addComponent('wokwi-arduino-uno', 50, 60);
+          const bz = canvas.addComponent('wokwi-buzzer', 420, 150);
+
+          canvas.netlist.addWire({ compId: uno.id, pin: '8' }, { compId: bz.id, pin: '1' }, '#805ad5');
+          canvas.netlist.addWire({ compId: bz.id, pin: '2' }, { compId: uno.id, pin: 'GND.1' }, '#1a202c');
+          canvas.renderWires();
+
+          code = `const int buzzerPin = 8;
+
+// A tiny slice of "Twinkle Twinkle Little Star"
+int melody[] = { 262, 262, 392, 392, 440, 440, 392 };
+int noteDurations[] = { 400, 400, 400, 400, 400, 400, 800 };
+
+void setup() {
+  // Nothing to configure - tone() drives the pin directly.
+}
+
+void loop() {
+  for (int i = 0; i < 7; i++) {
+    tone(buzzerPin, melody[i], noteDurations[i]);
+    delay(noteDurations[i] * 1.3); // Gap so notes don't blur together
+  }
+  noTone(buzzerPin);
+  delay(1500);
+}`;
+          break;
+        }
+
+        case 'joystick_demo': {
+          desc = 'Analog Joystick X/Y + Click Reader';
+          const uno = canvas.addComponent('wokwi-arduino-uno', 50, 60);
+          const joy = canvas.addComponent('wokwi-analog-joystick', 400, 90);
+
+          canvas.netlist.addWire({ compId: joy.id, pin: 'VCC' }, { compId: uno.id, pin: '5V' }, '#e53e3e');
+          canvas.netlist.addWire({ compId: joy.id, pin: 'GND' }, { compId: uno.id, pin: 'GND.1' }, '#1a202c');
+          canvas.netlist.addWire({ compId: joy.id, pin: 'VERT' }, { compId: uno.id, pin: 'A0' }, '#3182ce');
+          canvas.netlist.addWire({ compId: joy.id, pin: 'HORZ' }, { compId: uno.id, pin: 'A1' }, '#805ad5');
+          canvas.netlist.addWire({ compId: joy.id, pin: 'SEL' }, { compId: uno.id, pin: '2' }, '#38a169');
+          canvas.renderWires();
+
+          code = `const int vertPin = A0;
+const int horzPin = A1;
+const int selPin = 2;
+
+void setup() {
+  pinMode(selPin, INPUT_PULLUP); // Click connects SEL to GND
+  Serial.begin(9600);
+}
+
+void loop() {
+  int x = analogRead(horzPin);
+  int y = analogRead(vertPin);
+  bool clicked = digitalRead(selPin) == LOW;
+
+  Serial.print("X: "); Serial.print(x);
+  Serial.print("  Y: "); Serial.print(y);
+  Serial.print("  Click: "); Serial.println(clicked ? "YES" : "no");
+  delay(200);
+}`;
+          break;
+        }
+
+        case 'reaction_game': {
+          desc = 'Reaction Time Game';
+          const uno = canvas.addComponent('wokwi-arduino-uno', 50, 60);
+          const res = canvas.addComponent('wokwi-resistor', 420, 110, { value: 220 });
+          const led = canvas.addComponent('wokwi-led', 500, 110, { color: 'red' });
+          const btn = canvas.addComponent('wokwi-pushbutton', 420, 200);
+
+          canvas.netlist.addWire({ compId: uno.id, pin: '13' }, { compId: res.id, pin: '1' }, '#805ad5');
+          canvas.netlist.addWire({ compId: res.id, pin: '2' }, { compId: led.id, pin: 'A' }, '#805ad5');
+          canvas.netlist.addWire({ compId: led.id, pin: 'C' }, { compId: uno.id, pin: 'GND.1' }, '#1a202c');
+          canvas.netlist.addWire({ compId: btn.id, pin: '1.l' }, { compId: uno.id, pin: '2' }, '#38a169');
+          canvas.netlist.addWire({ compId: btn.id, pin: '2.l' }, { compId: uno.id, pin: 'GND.2' }, '#1a202c');
+          canvas.renderWires();
+
+          code = `const int ledPin = 13;
+const int buttonPin = 2;
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
+  Serial.begin(9600);
+  randomSeed(analogRead(A0));
+}
+
+void loop() {
+  Serial.println("Get ready...");
+  delay(random(1500, 4000)); // Random wait so you can't cheat!
+
+  digitalWrite(ledPin, HIGH);
+  Serial.println("GO! Press the button!");
+  unsigned long startTime = millis();
+
+  while (digitalRead(buttonPin) == HIGH) {
+    // Wait for the press
+  }
+
+  unsigned long reactionTime = millis() - startTime;
+  digitalWrite(ledPin, LOW);
+  Serial.print("Reaction time: ");
+  Serial.print(reactionTime);
+  Serial.println(" ms");
+  delay(2000);
+}`;
+          break;
+        }
+
+        case 'lcd_led': {
+          desc = '16x2 LCD Display + Status LED';
+          const uno = canvas.addComponent('wokwi-arduino-uno', 50, 60);
+          const lcd = canvas.addComponent('wokwi-lcd1602', 380, 60);
+          const res = canvas.addComponent('wokwi-resistor', 580, 220, { value: 220 });
+          const led = canvas.addComponent('wokwi-led', 660, 220, { color: 'blue' });
+
+          canvas.netlist.addWire({ compId: lcd.id, pin: 'VSS' }, { compId: uno.id, pin: 'GND.1' }, '#1a202c');
+          canvas.netlist.addWire({ compId: lcd.id, pin: 'VDD' }, { compId: uno.id, pin: '5V' }, '#e53e3e');
+          canvas.netlist.addWire({ compId: lcd.id, pin: 'V0' }, { compId: uno.id, pin: 'GND.2' }, '#1a202c');
+          canvas.netlist.addWire({ compId: lcd.id, pin: 'RS' }, { compId: uno.id, pin: '7' }, '#805ad5');
+          canvas.netlist.addWire({ compId: lcd.id, pin: 'RW' }, { compId: uno.id, pin: 'GND.3' }, '#1a202c');
+          canvas.netlist.addWire({ compId: lcd.id, pin: 'E' }, { compId: uno.id, pin: '8' }, '#805ad5');
+          canvas.netlist.addWire({ compId: lcd.id, pin: 'D4' }, { compId: uno.id, pin: '9' }, '#38a169');
+          canvas.netlist.addWire({ compId: lcd.id, pin: 'D5' }, { compId: uno.id, pin: '10' }, '#38a169');
+          canvas.netlist.addWire({ compId: lcd.id, pin: 'D6' }, { compId: uno.id, pin: '11' }, '#38a169');
+          canvas.netlist.addWire({ compId: lcd.id, pin: 'D7' }, { compId: uno.id, pin: '12' }, '#38a169');
+          canvas.netlist.addWire({ compId: uno.id, pin: '13' }, { compId: res.id, pin: '1' }, '#d69e2e');
+          canvas.netlist.addWire({ compId: res.id, pin: '2' }, { compId: led.id, pin: 'A' }, '#d69e2e');
+          canvas.netlist.addWire({ compId: led.id, pin: 'C' }, { compId: uno.id, pin: 'GND.1' }, '#1a202c');
+          canvas.renderWires();
+
+          code = `#include <LiquidCrystal.h>
+
+// LiquidCrystal(RS, E, D4, D5, D6, D7)
+LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+const int ledPin = 13;
+int counter = 0;
+
+void setup() {
+  lcd.begin(16, 2);
+  lcd.print("IrieBlocky LCD");
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  lcd.setCursor(0, 1);
+  lcd.print("Count: ");
+  lcd.print(counter);
+  lcd.print("   "); // Clears leftover digits
+
+  digitalWrite(ledPin, HIGH);
+  delay(500);
+  digitalWrite(ledPin, LOW);
+  delay(500);
+
+  counter++;
 }`;
           break;
         }
