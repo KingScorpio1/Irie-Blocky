@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IrieBlocky - Interactive Arduino Blockly & Wokwi Workbench</title>
+  
+  <!-- External Dependencies -->
+  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
+  <script src="https://unpkg.com/arduino-moving-average@1.0.0/MovingAverage.min.js"></script>
+  <script src="https://unpkg.com/@wokwi/elements@1.9.2/dist/wokwi-elements.bundle.js"></script>
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Application Scripts -->
+  <script src="js/wokwi_custom_elements.js"></script>
+  <script src="js/circuit_netlist.js"></script>
+  <script src="js/circuit_canvas.js"></script>
+  <script src="js/circuit_schematic.js"></script>
+  <script src="js/simulation_engine.js"></script>
+  <script src="js/sim_runner.js"></script>
+  <script src="js/arduino_blocks.js"></script>
+  <script src="js/arduino_generator.js"></script>
+  <script src="js/cpp_parser.js"></script>
+  <script src="js/app.js"></script>
+  <!-- Feature Scripts -->
+  <script src="js/sound_engine.js"></script>
+  <script src="js/serial_plotter.js"></script>
+  <script src="js/multimeter_probe.js"></script>
+  <script src="js/circuit_health.js"></script>
+  <script src="js/command_palette.js"></script>
+  <script src="js/diagram_importer_exporter.js"></script>
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-icon">&#x26A1;</div>
+      <div class="brand-title">
+        IrieBlocky
+        <span class="brand-subtitle">Arduino Workbench</span>
+      </div>
+      <span class="badge" id="blockCountBadge">0 blocks</span>
+    </div>
+
+    <!-- View Mode Switcher -->
+    <div class="view-switcher">
+      <button class="view-btn active" id="btnViewSplit" onclick="setViewMode('split', this)" title="Side-by-side Circuit Simulator & Blockly Code">&#x26A1; Workbench</button>
+      <button class="view-btn" id="btnViewCircuit" onclick="setViewMode('circuit', this)" title="Full-screen Circuit Workbench">&#x1F50C; Circuit</button>
+      <button class="view-btn" id="btnViewSchematic" onclick="setViewMode('schematic', this)" title="Standard Electrical Schematic Diagram (Screenshot 081349)">&#x1F4D0; Schematic</button>
+      <button class="view-btn" id="btnViewBom" onclick="setViewMode('bom', this)" title="Bill of Materials & Component List (Screenshot 081423)">&#x1F4CB; Component List</button>
+      <button class="view-btn" id="btnViewCode" onclick="setViewMode('code', this)" title="Blockly Visual Editor & C++ Code">&#x1F4BB; Code</button>
+    </div>
+
+    <!-- Nav Actions -->
+    <div class="nav-actions">
+      <!-- Simulation Controls -->
+      <div class="sim-controls">
+        <div class="sim-status-pill" id="simStatusPill" title="Virtual Arduino Status">
+          <span class="sim-dot"></span>
+          <span id="simStatusText">Idle</span>
+        </div>
+        <button class="btn btn-sim-start" id="btnSimStart" onclick="startSimulation()" title="Run Simulation (F5 / Ctrl+Enter)">
+          &#x25B6; Run
+        </button>
+        <button class="btn btn-sim-stop" id="btnSimStop" onclick="stopSimulation()" title="Stop Simulation (F5 / Ctrl+Enter)" style="display:none;">
+          &#x25A0; Stop
+        </button>
+      </div>
+
+      <!-- Starter Projects Dropdown -->
+      <div class="dropdown" style="position:relative; display:inline-block;">
+        <button class="btn btn-secondary" onclick="toggleExamplesDropdown(event)" title="Load ready-to-simulate example projects">
+          &#x1F4C1; Examples &#x25BE;
+        </button>
+        <div class="dropdown-menu" id="examplesDropdownMenu" style="display:none; position:absolute; right:0; top:calc(100% + 4px); background:#ffffff; border:1px solid var(--border); border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.15); min-width:260px; z-index:2000; padding:6px 0;">
+          <div style="padding:4px 14px; font-size:0.68rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Starter Projects</div>
+          <a class="dropdown-item" onclick="loadSampleProject('traffic_lights')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:#0284c7; font-weight:600; text-decoration:none;">&#x1F6A6; Traffic Light (Neat 90° Wiring)</a>
+          <a class="dropdown-item" onclick="loadSampleProject('blink')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x26A1; LED Blink (Pin 13)</a>
+          <a class="dropdown-item" onclick="loadSampleProject('franzininho')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x26A1; ESP32 Franzininho WiFi (LEDs)</a>
+          <a class="dropdown-item" onclick="loadSampleProject('grove_oled')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x1F4FA; Grove SH1107 OLED (128x128)</a>
+          <a class="dropdown-item" onclick="loadSampleProject('relay_module')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x1F50C; 5V Relay Module Switching</a>
+          <a class="dropdown-item" onclick="loadSampleProject('neopixel_ring')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x1F308; NeoPixel Ring Sweep</a>
+          <a class="dropdown-item" onclick="loadSampleProject('bmp180')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x1F321; BMP180 Barometer & Temp</a>
+          <a class="dropdown-item" onclick="loadSampleProject('mfrc522')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x1F4B3; MFRC522 RFID Reader</a>
+          <a class="dropdown-item" onclick="loadSampleProject('dht22')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x1F324; DHT22 Temp & Humidity</a>
+          <a class="dropdown-item" onclick="loadSampleProject('sonar')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x1F4E1; HC-SR04 Sonar Distance</a>
+          <a class="dropdown-item" onclick="loadSampleProject('servo')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x1F9BE; Servo 0°-180° Sweep</a>
+          <a class="dropdown-item" onclick="loadSampleProject('pot_dimmer')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x1F39B; Potentiometer PWM Dimmer</a>
+          <a class="dropdown-item" onclick="loadSampleProject('pir_alarm')" style="display:block; padding:8px 14px; font-size:0.8rem; cursor:pointer; color:var(--text); text-decoration:none;">&#x1F6A8; PIR Motion Alarm & Buzzer</a>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" onclick="clearAllWorkspaces()" title="Reset workspace and circuit">
+        &#x1F5D1; Reset
+      </button>
+      <button class="btn btn-secondary" onclick="saveWorkspace()" title="Save project to browser storage">
+        &#x1F4BE; Save
+      </button>
+      <button class="btn btn-secondary" onclick="loadWorkspace()" title="Restore saved project">
+        &#x1F5C1; Load
+      </button>
+      <button class="btn btn-secondary" onclick="validateCode()" title="Validate sketch structure">
+        &#x2714; Validate
+      </button>
+      <button class="btn btn-accent" onclick="exportIno()" title="Download sketch.ino for Arduino IDE">
+        &#x2B07; Download .ino
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Full-Screen Workbench Layout -->
+  <main class="workbench-container" id="workbenchContainer">
+    <!-- Left Pane: Interactive Circuit Workbench -->
+    <section id="circuitPane">
+      <!-- Circuit Component Shelf & Wiring Toolbar -->
+      <div class="circuit-toolbar" id="circuitToolbar">
+        <div class="circuit-toolbar-group toolbar-group-left">
+          <!-- Blue Add Part Button (A) -->
+          <button class="btn btn-primary btn-sm" onclick="circuitCanvas.openAddPartModal()" title="Add Part (Shortcut: A)">
+            &#x2795; Add Part (A)
+          </button>
+
+          <!-- Collapsible Sensors Dropdown -->
+          <div class="dropdown" style="position:relative; display:inline-block;">
+            <button class="btn btn-secondary btn-sm" onclick="toggleSensorsDropdown(event)" title="Browse & Add Sensors">
+              &#x1F321; Sensors &#x25BE;
+            </button>
+            <div class="dropdown-menu" id="sensorsDropdownMenu" style="display:none; position:absolute; left:0; top:calc(100% + 4px); background:#ffffff; border:1px solid var(--border); border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.15); min-width:260px; max-height:360px; overflow-y:auto; z-index:2000; padding:6px 0;">
+              <div style="padding:4px 14px; font-size:0.68rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Sensors & Transducers</div>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('board-bmp180')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x1F321; BMP180 Barometer & Temp</span>
+                <span class="badge" style="font-size:0.65rem;">I2C</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('board-mfrc522')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x1F4B3; MFRC522 RFID Reader</span>
+                <span class="badge" style="font-size:0.65rem;">SPI</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-hc-sr04')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x1F4E1; HC-SR04 Ultrasonic</span>
+                <span class="badge" style="font-size:0.65rem;">Sonar</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-dht22')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x1F324; DHT22 Temp & Humidity</span>
+                <span class="badge" style="font-size:0.65rem;">Digital</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-pir-motion-sensor')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x1F6B6; PIR Motion Sensor</span>
+                <span class="badge" style="font-size:0.65rem;">Digital</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-photoresistor-sensor')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x2600; Photoresistor (LDR)</span>
+                <span class="badge" style="font-size:0.65rem;">Analog</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-gas-sensor')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x1F4A8; MQ-2 Gas Sensor</span>
+                <span class="badge" style="font-size:0.65rem;">Analog/Dig</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-ntc-temperature-sensor')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x1F321; NTC Thermistor</span>
+                <span class="badge" style="font-size:0.65rem;">Analog</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-ds18b20')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x1F916; DS18B20 1-Wire Temp</span>
+                <span class="badge" style="font-size:0.65rem;">1-Wire</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-ds1307')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x23F0; DS1307 Real Time Clock</span>
+                <span class="badge" style="font-size:0.65rem;">I2C</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-mpu6050')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x1F4D0; MPU6050 Gyro & Accel</span>
+                <span class="badge" style="font-size:0.65rem;">I2C</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-hx711')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x2696; HX711 Load Cell ADC</span>
+                <span class="badge" style="font-size:0.65rem;">Serial</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-flame-sensor')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x1F525; Flame Sensor</span>
+                <span class="badge" style="font-size:0.65rem;">Analog/Dig</span>
+              </a>
+              <a class="dropdown-item" onclick="addCircuitComponentAndClose('wokwi-analog-joystick')" style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px; font-size:0.78rem; cursor:pointer; color:var(--text);">
+                <span>&#x1F579; 2-Axis Analog Joystick</span>
+                <span class="badge" style="font-size:0.65rem;">Analog</span>
+              </a>
+            </div>
+          </div>
+
+          <button class="btn btn-secondary btn-sm" onclick="circuitCanvas.rotateSelected()" title="Rotate Selected 90° Clockwise (Shortcut: R)">
+            &#x21BB; Rotate (R)
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="circuitCanvas.duplicateSelected()" title="Duplicate Selected (Shortcut: D)">
+            &#x2398; Duplicate (D)
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="circuitCanvas.deleteSelected()" title="Delete Selected (Shortcut: Delete / Backspace)">
+            &#x1F5D1; Delete
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="circuitCanvas.toggleGrid()" title="Toggle Grid Overlay (Shortcut: G)">
+            &#x229E; Grid (G)
+          </button>
+        </div>
+
+        <div class="circuit-toolbar-group toolbar-group-right">
+          <!-- Zoom Controls (+ / - / Fit) -->
+          <div style="display:flex; align-items:center; gap:2px; background:#ffffff; border:1px solid var(--border); border-radius:6px; padding:2px 4px; height:30px; box-sizing:border-box;">
+            <button class="btn btn-secondary btn-sm" style="border:none; padding:2px 6px; height:100%;" onclick="circuitCanvas.zoomOut()" title="Zoom Out (Shortcut: -)">&#x2212;</button>
+            <span id="zoomLevelLabel" style="font-size:0.75rem; font-weight:700; color:var(--text-muted); min-width:38px; text-align:center;">100%</span>
+            <button class="btn btn-secondary btn-sm" style="border:none; padding:2px 6px; height:100%;" onclick="circuitCanvas.zoomIn()" title="Zoom In (Shortcut: +)">&#x2B;</button>
+            <button class="btn btn-secondary btn-sm" style="border:none; padding:2px 6px; height:100%;" onclick="circuitCanvas.zoomFit()" title="Fit to Window (Shortcut: F)">&#x2922; Fit</button>
+          </div>
+
+          <!-- 14 Wokwi Wire Colors Palette with Shortcuts -->
+          <div class="wire-palette" title="Select wire color (Shortcuts: 0-9, C, L, M, P, Y)">
+            <span style="font-size:0.7rem; font-weight:700; color:var(--text-muted); margin-right:2px;">Wire:</span>
+            <div class="wire-swatch" data-color="#1a202c" style="background:#1a202c;" onclick="circuitCanvas.setWireColor('#1a202c')" title="0: Black (GND)"></div>
+            <div class="wire-swatch" data-color="#8b4513" style="background:#8b4513;" onclick="circuitCanvas.setWireColor('#8b4513')" title="1: Brown"></div>
+            <div class="wire-swatch" data-color="#e53e3e" style="background:#e53e3e;" onclick="circuitCanvas.setWireColor('#e53e3e')" title="2: Red (5V/VCC)"></div>
+            <div class="wire-swatch" data-color="#dd6b20" style="background:#dd6b20;" onclick="circuitCanvas.setWireColor('#dd6b20')" title="3: Orange"></div>
+            <div class="wire-swatch" data-color="#d4af37" style="background:#d4af37;" onclick="circuitCanvas.setWireColor('#d4af37')" title="4: Gold"></div>
+            <div class="wire-swatch active" data-color="#38a169" style="background:#38a169;" onclick="circuitCanvas.setWireColor('#38a169')" title="5: Green (Signal)"></div>
+            <div class="wire-swatch" data-color="#3182ce" style="background:#3182ce;" onclick="circuitCanvas.setWireColor('#3182ce')" title="6: Blue (I2C)"></div>
+            <div class="wire-swatch" data-color="#805ad5" style="background:#805ad5;" onclick="circuitCanvas.setWireColor('#805ad5')" title="7: Violet (SPI/Clock)"></div>
+            <div class="wire-swatch" data-color="#808080" style="background:#808080;" onclick="circuitCanvas.setWireColor('#808080')" title="8: Gray"></div>
+            <div class="wire-swatch" data-color="#ffffff" style="background:#ffffff;" onclick="circuitCanvas.setWireColor('#ffffff')" title="9: White"></div>
+            <div class="wire-swatch" data-color="#00ffff" style="background:#00ffff;" onclick="circuitCanvas.setWireColor('#00ffff')" title="C: Cyan"></div>
+            <div class="wire-swatch" data-color="#32cd32" style="background:#32cd32;" onclick="circuitCanvas.setWireColor('#32cd32')" title="L: Lime"></div>
+            <div class="wire-swatch" data-color="#ff00ff" style="background:#ff00ff;" onclick="circuitCanvas.setWireColor('#ff00ff')" title="M: Magenta"></div>
+            <div class="wire-swatch" data-color="#d69e2e" style="background:#d69e2e;" onclick="circuitCanvas.setWireColor('#d69e2e')" title="Y: Yellow"></div>
+          </div>
+
+          <!-- Wire Routing Style Selector -->
+          <select class="btn btn-secondary btn-sm" id="wireRoutingSelect" onchange="circuitCanvas.setWireRoutingMode(this.value)" title="Toggle wire routing style: Neat 90° Orthogonal vs Curved Bezier" style="padding:3px 6px; font-size:0.73rem; font-weight:600; height:30px;">
+            <option value="orthogonal" selected>Wire: Neat (90°)</option>
+            <option value="curved">Wire: Curved</option>
+          </select>
+
+          <button class="btn btn-secondary btn-sm" onclick="resetCircuit()" title="Reset circuit to default blink wiring">&#x21BB; Reset</button>
+        </div>
+      </div>
+
+      <!-- Circuit Canvas Board -->
+      <div id="circuitBoard" tabindex="0">
+        <div id="circuitViewport" class="circuit-viewport">
+          <svg id="wireSvg"></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Draggable Resizer Handle -->
+    <div class="main-splitter" id="mainSplitter" title="Drag to resize Circuit and Code views"></div>
+
+    <!-- Right Pane: Blockly Canvas + Live Code Panel -->
+    <section id="codePane">
+      <!-- Blockly Visual Coding Area -->
+      <div class="blockly-wrapper">
+        <div id="blocklyDiv"></div>
+      </div>
+
+      <!-- Live Code & Tools Panel -->
+      <aside class="side-panel">
+        <div class="panel-header">
+          <div class="panel-tabs">
+            <button class="tab-btn active" onclick="switchTab('codeTab', this)">Live C++ Code</button>
+            <button class="tab-btn" id="serialTabBtn" onclick="switchTab('serialTab', this)">Serial Monitor</button>
+            <button class="tab-btn" id="plotterTabBtn" onclick="switchTab('plotterTab', this)">&#x1F4C8; Plotter</button>
+            <button class="tab-btn" onclick="switchTab('parseTab', this)">Import C++</button>
+            <button class="tab-btn" id="refTabBtn" onclick="switchTab('refTab', this)">Diagram Reference</button>
+            <button class="tab-btn" onclick="switchTab('toolsTab', this)">Tools</button>
+          </div>
+          <div class="panel-actions" id="codeTabActions">
+            <button class="btn btn-secondary btn-sm" onclick="copyCode()" title="Copy Arduino code">&#x1F4CB; Copy</button>
+          </div>
+        </div>
+
+        <div class="panel-body">
+          <!-- Tab 1: Live C++ Code View -->
+          <div class="tab-pane active" id="codeTab">
+            <div id="codeOutputContainer">
+              <pre id="codeOutput">// Initializing Arduino Blockly...</pre>
+            </div>
+          </div>
+
+          <!-- Tab 2: Serial Monitor Terminal -->
+          <div class="tab-pane" id="serialTab">
+            <div class="serial-container">
+              <div class="serial-toolbar">
+                <div class="serial-options">
+                  <label title="Auto-scroll terminal to bottom">
+                    <input type="checkbox" id="serialAutoScroll" checked> Autoscroll
+                  </label>
+                  <label title="Prefix lines with current time">
+                    <input type="checkbox" id="serialTimestamps"> Timestamps
+                  </label>
+                  <select id="serialBaudSelect">
+                    <option value="9600" selected>9600 baud</option>
+                    <option value="19200">19200 baud</option>
+                    <option value="57600">57600 baud</option>
+                    <option value="115200">115200 baud</option>
+                  </select>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="clearSerialOutput()" title="Clear terminal output">&#x1F5D1; Clear</button>
+              </div>
+              <pre id="serialConsole" class="serial-console"></pre>
+              <div class="serial-input-bar">
+                <input type="text" id="serialInputText" class="serial-input" placeholder="Send data to Serial..." autocomplete="off">
+                <button class="btn btn-primary btn-sm" onclick="sendSerialData()">Send</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 3: Real-Time Serial Plotter & Waveform Grapher -->
+          <div class="tab-pane" id="plotterTab">
+            <div style="display:flex; flex-direction:column; height:100%; background:#0f172a;">
+              <!-- Plotter Toolbar -->
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); flex-wrap:wrap; gap:6px;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <span style="color:#38bdf8; font-size:0.78rem; font-weight:700;">&#x1F4C8; Serial Plotter</span>
+                  <div id="plotterLegend" style="display:flex; flex-wrap:wrap; gap:0;"></div>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <label style="font-size:0.7rem; color:#94a3b8; display:flex; align-items:center; gap:4px;">
+                    Window:
+                    <select id="plotterWindowSel" onchange="serialPlotter && serialPlotter.setWindowSeconds(this.value)" style="background:#0f172a; color:#e2e8f0; border:1px solid rgba(255,255,255,0.15); border-radius:4px; font-size:0.7rem; padding:2px 4px;">
+                      <option value="5">5s</option>
+                      <option value="10" selected>10s</option>
+                      <option value="30">30s</option>
+                      <option value="60">60s</option>
+                    </select>
+                  </label>
+                  <label style="font-size:0.7rem; color:#94a3b8; display:flex; align-items:center; gap:4px;">
+                    Y-Range:
+                    <select id="plotterRangeSel" onchange="applyPlotterRange()" style="background:#0f172a; color:#e2e8f0; border:1px solid rgba(255,255,255,0.15); border-radius:4px; font-size:0.7rem; padding:2px 4px;">
+                      <option value="auto">Auto</option>
+                      <option value="0-255">0–255 (PWM)</option>
+                      <option value="0-1023">0–1023 (ADC)</option>
+                      <option value="0-100">0–100 (%)</option>
+                    </select>
+                  </label>
+                  <button class="btn btn-secondary btn-sm" id="plotterPauseBtn" onclick="togglePlotterPause()" style="font-size:0.7rem; background:#1e293b; border-color:rgba(255,255,255,0.15); color:#e2e8f0; height:26px;">
+                    &#x23F8; Pause
+                  </button>
+                  <button class="btn btn-secondary btn-sm" onclick="serialPlotter && serialPlotter.clear()" style="font-size:0.7rem; background:#1e293b; border-color:rgba(255,255,255,0.15); color:#e2e8f0; height:26px;">
+                    &#x1F5D1; Clear
+                  </button>
+                  <button class="btn btn-secondary btn-sm" onclick="serialPlotter && serialPlotter.exportCsv()" title="Download data as CSV spreadsheet" style="font-size:0.7rem; background:#1e293b; border-color:rgba(255,255,255,0.15); color:#e2e8f0; height:26px;">
+                    &#x2B07; CSV
+                  </button>
+                </div>
+              </div>
+              <!-- Canvas -->
+              <div id="plotterCanvasContainer" style="flex:1; position:relative; min-height:0;">
+                <canvas id="plotterCanvas" style="display:block; width:100%; height:100%;"></canvas>
+              </div>
+              <!-- Plotter Hint -->
+              <div style="padding:6px 12px; background:#1e293b; border-top:1px solid rgba(255,255,255,0.08); font-size:0.68rem; color:#475569;">
+                Run the simulation and output numeric data with <code style="color:#38bdf8;">Serial.println(value)</code> or <code style="color:#38bdf8;">Serial.println("x:" + String(x) + ",y:" + String(y))</code> for multi-channel.
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 4: C++ to Blocks Parser -->
+          <div class="tab-pane" id="parseTab">
+            <div class="parser-container">
+              <p class="parser-hint">
+                Paste Arduino C++ code below to convert it into Blockly blocks. Statements in <code>setup()</code> and <code>loop()</code> will be connected sequentially.
+              </p>
+              <textarea id="cppInput" placeholder="void setup() {&#10;  Serial.begin(9600);&#10;}&#10;&#10;void loop() {&#10;  digitalWrite(13, HIGH);&#10;  delay(1000);&#10;  digitalWrite(13, LOW);&#10;  delay(1000);&#10;}"></textarea>
+              <button class="btn btn-primary" onclick="loadFromCpp()">
+                &#x21C4; Convert C++ to Blocks
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab 5: Diagram Reference Sheet -->
+          <div class="tab-pane" id="refTab">
+            <div class="ref-sheet-container">
+              <div class="ref-search-bar">
+                <input type="text" id="refSearchInput" placeholder="Search reference parts (e.g. BMP180, MFRC522, SSD1306, Uno)..." oninput="filterRefSheet(this.value)">
+              </div>
+              <div id="refSheetContent">
+                <!-- Dynamically generated or detailed reference cards -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 6: Tools & Diagnostics -->
+          <div class="tab-pane" id="toolsTab">
+            <div class="tools-container">
+              <!-- Multimeter Probe -->
+              <div class="tool-card" style="border-left:3px solid #0284c7;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                  <div>
+                    <h4 style="margin:0 0 4px;">&#x26A1; Live Multimeter Probe <span style="font-size:0.68rem; background:#e0f2fe; color:#0369a1; padding:1px 6px; border-radius:10px; font-weight:700; margin-left:4px;">NEW</span></h4>
+                    <p style="margin:0 0 8px;">Hover any pin or wire while simulation is running to inspect live voltage, current, and logic state. <kbd style="background:#e2e8f0; padding:1px 5px; border-radius:3px; font-size:0.75rem;">M</kbd> to toggle.</p>
+                  </div>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="multimeterProbeBtn" onclick="multimeterProbe && multimeterProbe.toggle()" title="Toggle live pin voltage inspection (Shortcut: M)">
+                  &#x26A1; Toggle Probe (M)
+                </button>
+              </div>
+              <!-- Circuit Health -->
+              <div class="tool-card" style="border-left:3px solid #16a34a;">
+                <h4 style="margin:0 0 4px;">&#x1F6E1; Circuit Health Checker <span style="font-size:0.68rem; background:#dcfce7; color:#15803d; padding:1px 6px; border-radius:10px; font-weight:700; margin-left:4px;">NEW</span></h4>
+                <p style="margin:0 0 8px;">Scans for short circuits, LEDs missing current-limiting resistors, and ungrounded modules — with educational fix recommendations.</p>
+                <button class="btn btn-secondary btn-sm" onclick="circuitHealthChecker && circuitHealthChecker.showModal()">&#x1F6E1; Run Health Check</button>
+              </div>
+              <!-- Sound Toggle -->
+              <div class="tool-card" style="border-left:3px solid #d97706;">
+                <h4 style="margin:0 0 4px;">&#x1F50A; Tactile Sound Effects <span style="font-size:0.68rem; background:#fef3c7; color:#b45309; padding:1px 6px; border-radius:10px; font-weight:700; margin-left:4px;">NEW</span></h4>
+                <p style="margin:0 0 8px;">Relay clicks, pushbutton taps, RFID scan chimes, and wire-snap sounds synthesized in real-time via Web Audio API.</p>
+                <button class="btn btn-secondary btn-sm" id="soundToggleBtn" onclick="toggleSoundEffects()">&#x1F50A; Sound: ON</button>
+              </div>
+              <!-- Command Palette -->
+              <div class="tool-card" style="border-left:3px solid #7c3aed;">
+                <h4 style="margin:0 0 4px;">&#x2318; Command Palette <span style="font-size:0.68rem; background:#ede9fe; color:#6d28d9; padding:1px 6px; border-radius:10px; font-weight:700; margin-left:4px;">NEW</span></h4>
+                <p style="margin:0 0 8px;">Instantly search and place any component, load a sample project, or trigger any editor action. Press <kbd style="background:#e2e8f0; padding:1px 5px; border-radius:3px; font-size:0.75rem;">Ctrl+K</kbd> or <kbd style="background:#e2e8f0; padding:1px 5px; border-radius:3px; font-size:0.75rem;">/</kbd> anywhere.</p>
+                <button class="btn btn-secondary btn-sm" onclick="commandPalette && commandPalette.open()">&#x1F50D; Open Palette (Ctrl+K)</button>
+              </div>
+              <!-- Diagram Import/Export -->
+              <div class="tool-card" style="border-left:3px solid #0891b2;">
+                <h4 style="margin:0 0 4px;">&#x1F504; Wokwi diagram.json Import / Export <span style="font-size:0.68rem; background:#cffafe; color:#0e7490; padding:1px 6px; border-radius:10px; font-weight:700; margin-left:4px;">NEW</span></h4>
+                <p style="margin:0 0 8px;">Import any public Wokwi project or export your circuit in official <code>diagram.json</code> format for full cross-platform compatibility.</p>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button class="btn btn-secondary btn-sm" onclick="diagramIO && diagramIO.showImportModal()">&#x1F4E5; Import diagram.json</button>
+                  <button class="btn btn-secondary btn-sm" onclick="diagramIO && diagramIO.downloadWokwiJson()">&#x1F4E4; Export diagram.json</button>
+                </div>
+              </div>
+              <!-- Lab Report -->
+              <div class="tool-card" style="border-left:3px solid #e11d48;">
+                <h4 style="margin:0 0 4px;">&#x1F4CB; Engineering Lab Report <span style="font-size:0.68rem; background:#ffe4e6; color:#be123c; padding:1px 6px; border-radius:10px; font-weight:700; margin-left:4px;">NEW</span></h4>
+                <p style="margin:0 0 8px;">Generate a printable engineering lab report including the Bill of Materials and complete Arduino source code for academic or professional submission.</p>
+                <button class="btn btn-secondary btn-sm" onclick="diagramIO && diagramIO.generateLabReport()">&#x1F5A8; Generate Lab Report (PDF)</button>
+              </div>
+              <!-- Existing tools -->
+              <div class="tool-card">
+                <h4>Blockly Diagnostic</h4>
+                <p>Inspect workspace blocks and verify that every block has an active code generator.</p>
+                <button class="btn btn-secondary btn-sm" onclick="debugBlocks()">Run Diagnostic</button>
+              </div>
+              <div class="tool-card">
+                <h4>Sketch Validation</h4>
+                <p>Verify that your sketch conforms to Arduino standards (setup and loop functions).</p>
+                <button class="btn btn-secondary btn-sm" onclick="validateCode()">Validate Sketch</button>
+              </div>
+              <div class="tool-card">
+                <h4>Force Code Generation</h4>
+                <p>Manually trigger Arduino C++ generation.</p>
+                <button class="btn btn-secondary btn-sm" onclick="generateCode()">Generate Code</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- Schematic View Pane (Matching Screenshot 2026-09-17 081349.png) -->
+    <section id="schematicPane" style="display:none; flex-direction:column; width:100%; height:100%; background:#ffffff; position:relative;">
+      <!-- Schematic View Header Bar -->
+      <div class="view-header-bar">
+        <h2 class="view-header-title">Schematic View</h2>
+        <div class="view-header-actions">
+          <button class="btn btn-secondary btn-sm" onclick="exportSchematicSvg()" title="Download lossless SVG vector schematic">
+            &#x2B07; Download .SVG
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="exportSchematicPdf()" title="Download / Print Schematic as PDF (Screenshot 081349)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Download .PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Engineering Drawing Canvas Area -->
+      <div class="schematic-viewport" id="schematicCanvasContainer">
+        <!-- SVG injected dynamically by CircuitSchematic.renderSchematic -->
+      </div>
+    </section>
+
+    <!-- Component List / BOM Pane (Matching Screenshot 2026-09-17 081423.png) -->
+    <section id="bomPane" style="display:none; flex-direction:column; width:100%; height:100%; background:#ffffff; position:relative;">
+      <!-- Component List Header Bar -->
+      <div class="view-header-bar">
+        <h2 class="view-header-title">Component List</h2>
+        <div class="view-header-actions">
+          <button class="btn btn-secondary btn-sm" onclick="exportBomCsv()" title="Download CSV BOM Table (Screenshot 081423)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Download CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- BOM Data Table -->
+      <div class="bom-container">
+        <table class="bom-table" id="bomTable">
+          <thead>
+            <tr>
+              <th style="width:25%;">Name</th>
+              <th style="width:20%; text-align:center;">Quantity</th>
+              <th style="width:55%;">Component</th>
+            </tr>
+          </thead>
+          <tbody id="bomTableBody">
+            <!-- Dynamic BOM rows generated by CircuitSchematic.renderBomTable -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Status Notification Toast -->
+  <div class="status-banner" id="statusDiv"></div>
+
+  <!-- Toolbox XML Definition -->
+  <xml id="toolbox" style="display:none">
+    <category name="Arduino" colour="#4A148C">
+      <block type="arduino_setup"></block>
+      <block type="arduino_loop"></block>
+      <block type="serial_begin"></block>
+      <block type="delay_ms"></block>
+    </category>
+
+    <category name="Input/Output" colour="#5C6BC0">
+      <block type="digital_write"></block>
+      <block type="pwm_write"></block>
+      <block type="digital_read"></block>
+      <block type="analog_read"></block>
+      <block type="led_write"></block>
+      <block type="tone_start"></block>
+      <block type="tone_stop"></block>
+    </category>
+  
+    <category name="Sensors" colour="#7E57C2">
+      <!-- Temperature & Humidity (DHT) -->
+      <block type="dht_init"></block>
+      <block type="dht_read_temp"></block>
+      <block type="dht_read_humidity"></block>
+      <!-- PIR Motion Sensor -->
+      <block type="pir_read_motion"></block>
+      <!-- Photoresistor (LDR) -->
+      <block type="ldr_read_level"></block>
+      <!-- MQ-2 Gas Sensor -->
+      <block type="mq2_read_gas"></block>
+      <!-- NTC Analog Thermistor -->
+      <block type="ntc_read_temp"></block>
+      <!-- DS18B20 One-Wire Temp -->
+      <block type="ds18b20_read_temp"></block>
+      <!-- BMP180 Barometric Pressure -->
+      <block type="bmp180_read_pressure"></block>
+      <block type="bmp180_read_temp"></block>
+      <block type="bmp180_read_altitude"></block>
+      <!-- HX711 Load Cell -->
+      <block type="hx711_init"></block>
+      <block type="hx711_read_weight"></block>
+      <!-- MFRC522 RFID -->
+      <block type="mfrc522_init"></block>
+      <block type="mfrc522_card_present"></block>
+      <block type="mfrc522_read_uid"></block>
+      <!-- Joystick -->
+      <block type="joystick_read"></block>
+      <!-- Generic Analog / Potentiometer -->
+      <block type="sensor_temp"></block>
+      <block type="light_sensor"></block>
+      <block type="light_sensor_raw"></block>
+      <block type="potentiometer"></block>
+      <!-- Ultrasonic Sensor -->
+      <block type="ultrasonic_add"></block>
+      <block type="ultrasonic_read"></block>
+      <!-- Encoder -->
+      <block type="encoder_add"></block>
+      <block type="encoder_read"></block>
+      <block type="encoder_write"></block>
+      <!-- Color Sensor -->
+      <block type="color_sensor_color"></block>
+      <block type="color_sensor_brightness"></block>
+      <block type="color_sensor_lux"></block>
+      <block type="color_sensor_temp"></block>
+      <!-- Distance Sensor -->
+      <block type="distance_sensor_mm"></block>
+      <!-- Accelerometer/Gyroscope -->
+      <block type="mpu6050_accel"></block>
+      <block type="mpu6050_gyro"></block>
+      <!-- RTC -->
+      <block type="rtc_add"></block>
+      <block type="rtc_year"></block>
+      <block type="rtc_get"></block>
+    </category>
+  
+    <category name="Motion" colour="#26A69A">
+      <block type="motion_move"></block>
+      <!-- Servo Motors -->
+      <block type="servo_attach"></block>
+      <block type="servo_detach"></block>
+      <block type="servo_write"></block>
+      <block type="servo_read"></block>
+      <!-- Stepper Motors -->
+      <block type="stepper_create_2pin"></block>
+      <block type="stepper_create_4pin"></block>
+      <block type="stepper_set_speed"></block>
+      <block type="stepper_step"></block>
+      <!-- DC Motors (L298N) -->
+      <block type="l298n_attach"></block>
+      <block type="l298n_set_direction"></block>
+      <block type="l298n_set_speed"></block>
+    </category>
+  
+    <category name="Control" colour="#D81B60">
+      <block type="controls_if"></block>
+      <block type="controls_repeat_ext"></block>
+      <block type="controls_whileUntil"></block>
+      <!-- Timing Blocks -->
+      <block type="wait_ms"></block>
+      <block type="millis"></block>
+      <block type="wait_forever"></block>
+    </category>
+  
+    <category name="Logic" colour="#8D6E63">
+      <block type="logic_compare"></block>
+      <block type="logic_operation"></block>
+      <block type="logic_boolean"></block>
+    </category>
+  
+    <category name="Math" colour="#66BB6A">
+      <block type="math_number"></block>
+      <block type="math_arithmetic"></block>
+      <block type="math_single"></block>
+      <block type="math_map"></block>
+      <!-- Advanced Math Blocks -->
+      <block type="math_sin"></block>
+      <block type="math_pi"></block>
+      <block type="math_is_even"></block>
+      <block type="math_round"></block>
+      <block type="math_sqrt"></block>
+      <block type="math_min"></block>
+      <block type="math_modulo"></block>
+      <block type="math_constrain"></block>
+      <block type="math_map_advanced"></block>
+      <block type="math_random_int"></block>
+      <block type="math_random_float"></block>
+      <block type="math_bit_read"></block>
+      <block type="math_bit_clear"></block>
+      <block type="math_bit_write"></block>
+      <block type="math_high_byte"></block>
+      <!-- Signal Processing Blocks -->
+      <block type="signal_new_filter"></block>
+      <block type="signal_add_to_filter"></block>
+      <block type="signal_get_filter_value"></block>
+    </category>
+  
+    <category name="Text" colour="#FFA726">
+      <block type="text"></block>
+      <block type="text_join"></block>
+      <block type="text_length"></block>
+      <!-- Advanced String Blocks -->
+      <block type="char_is_alpha"></block>
+      <block type="string_starts_with"></block>
+      <block type="string_to_upper"></block>
+      <block type="string_to_int"></block>
+      <block type="string_create"></block>
+      <block type="string_append"></block>
+      <block type="string_find"></block>
+      <block type="string_substring"></block>
+      <block type="string_trim"></block>
+      <block type="string_replace"></block>
+    </category>
+  
+    <category name="Variables" colour="#00838F" custom="VARIABLE"></category>
+    <category name="Functions" colour="#5E35B1" custom="PROCEDURE"></category>
+  </xml>
+
+  <!-- View Switcher & Splitter Script -->
+  <script>
+    let circuitCanvas = null;
+
+    // Initialize Circuit Canvas once DOM loads
+    document.addEventListener('DOMContentLoaded', () => {
+      circuitCanvas = new CircuitCanvas('circuitBoard', 'wireSvg');
+      window.circuitCanvas = circuitCanvas;
+      circuitCanvas.loadDefaultCircuit();
+      initSplitter();
+
+      // Link simulation engine
+      if (window.ArduinoBlockly && ArduinoBlockly.getSimulationEngine) {
+        const engine = ArduinoBlockly.getSimulationEngine();
+        if (engine) engine.setCircuit(circuitCanvas);
+      }
+
+      // ── NEW FEATURE MODULES ──────────────────────────────────────
+
+      // 1. Serial Plotter
+      if (window.SerialPlotter) {
+        window.serialPlotter = new SerialPlotter('plotterCanvas', 'plotterCanvasContainer');
+      }
+
+      // 2. Multimeter Probe
+      if (window.MultimeterProbe) {
+        window.multimeterProbe = new MultimeterProbe(circuitCanvas);
+      }
+
+      // 3. Circuit Health Checker
+      if (window.CircuitHealthChecker) {
+        window.circuitHealthChecker = new CircuitHealthChecker(circuitCanvas);
+      }
+
+      // 4. Diagram Importer / Exporter
+      if (window.DiagramImporterExporter) {
+        window.diagramIO = new DiagramImporterExporter(circuitCanvas);
+      }
+    });
+
+    // ── Plotter helper functions ─────────────────────────────────────
+
+    function togglePlotterPause() {
+      if (!window.serialPlotter) return;
+      const paused = window.serialPlotter.togglePause();
+      const btn = document.getElementById('plotterPauseBtn');
+      if (btn) btn.textContent = paused ? '▶ Resume' : '⏸ Pause';
+    }
+
+    function applyPlotterRange() {
+      if (!window.serialPlotter) return;
+      const sel = document.getElementById('plotterRangeSel');
+      const val = sel ? sel.value : 'auto';
+      if (val === 'auto') {
+        window.serialPlotter.setRange('auto');
+      } else {
+        const [minStr, maxStr] = val.split('-');
+        window.serialPlotter.setRange('fixed', Number(minStr), Number(maxStr));
+      }
+    }
+
+    // ── Sound Effects toggle ─────────────────────────────────────────
+
+    function toggleSoundEffects() {
+      if (!window.soundEngine) return;
+      const enabled = window.soundEngine.toggleSound();
+      const btn = document.getElementById('soundToggleBtn');
+      if (btn) btn.textContent = enabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+      // Play a sample click so user can hear the effect
+      if (enabled) window.soundEngine.playSwitchClick(false);
+    }
+
+    function addCircuitComponent(type) {
+      if (!circuitCanvas) return;
+      const offset = (circuitCanvas.netlist.getAllComponents().length * 20) % 150;
+      circuitCanvas.addComponent(type, 180 + offset, 120 + offset);
+    }
+
+    function toggleSensorsDropdown(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const menu = document.getElementById('sensorsDropdownMenu');
+      if (menu) {
+        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+      }
+    }
+
+    function addCircuitComponentAndClose(type) {
+      addCircuitComponent(type);
+      const menu = document.getElementById('sensorsDropdownMenu');
+      if (menu) menu.style.display = 'none';
+    }
+
+    // Close any open dropdowns when clicking outside
+    window.addEventListener('click', (e) => {
+      if (!e.target.closest('.dropdown')) {
+        const sensorsMenu = document.getElementById('sensorsDropdownMenu');
+        if (sensorsMenu) sensorsMenu.style.display = 'none';
+        const examplesMenu = document.getElementById('examplesDropdownMenu');
+        if (examplesMenu) examplesMenu.style.display = 'none';
+      }
+    });
+
+    function selectWireColor(color, el) {
+      document.querySelectorAll('.wire-swatch').forEach(s => s.classList.remove('active'));
+      if (el) el.classList.add('active');
+      if (circuitCanvas) circuitCanvas.setWireColor(color);
+    }
+
+    function resetCircuit() {
+      if (!circuitCanvas) return;
+      if (confirm('Reset circuit to default Arduino blink setup?')) {
+        circuitCanvas.loadDefaultCircuit();
+      }
+    }
+
+    function clearAllWorkspaces() {
+      if (confirm('Reset both Circuit and Blockly workspaces to default?')) {
+        clearWorkspace();
+        if (circuitCanvas) circuitCanvas.loadDefaultCircuit();
+      }
+    }
+
+    // View Mode Switcher: Supports Split, Circuit, Schematic, BOM, and Code views
+    function setViewMode(mode, btn) {
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const circuitPane = document.getElementById('circuitPane');
+      const codePane = document.getElementById('codePane');
+      const splitter = document.getElementById('mainSplitter');
+      const schematicPane = document.getElementById('schematicPane');
+      const bomPane = document.getElementById('bomPane');
+
+      // Hide all panes first
+      circuitPane.style.display = 'none';
+      codePane.style.display = 'none';
+      splitter.style.display = 'none';
+      if (schematicPane) schematicPane.style.display = 'none';
+      if (bomPane) bomPane.style.display = 'none';
+
+      if (mode === 'circuit') {
+        circuitPane.style.display = 'flex';
+        circuitPane.style.flex = '100';
+      } else if (mode === 'code') {
+        codePane.style.display = 'flex';
+        codePane.style.flex = '100';
+      } else if (mode === 'schematic') {
+        if (schematicPane) {
+          schematicPane.style.display = 'flex';
+          schematicPane.style.flex = '100';
+          if (window.CircuitSchematic && window.circuitCanvas && circuitCanvas.netlist) {
+            CircuitSchematic.renderSchematic(circuitCanvas.netlist, 'schematicCanvasContainer');
+          }
+        }
+      } else if (mode === 'bom') {
+        if (bomPane) {
+          bomPane.style.display = 'flex';
+          bomPane.style.flex = '100';
+          if (window.CircuitSchematic && window.circuitCanvas && circuitCanvas.netlist) {
+            CircuitSchematic.renderBomTable(circuitCanvas.netlist, 'bomTableBody');
+          }
+        }
+      } else {
+        // Split mode (Workbench: Circuit + Code)
+        circuitPane.style.display = 'flex';
+        circuitPane.style.flex = '50';
+        codePane.style.display = 'flex';
+        codePane.style.flex = '50';
+        splitter.style.display = 'flex';
+      }
+
+      // Trigger Blockly resize & wire re-render
+      setTimeout(() => {
+        const ws = ArduinoBlockly.getWorkspace();
+        if (ws) Blockly.svgResize(ws);
+        if (circuitCanvas) circuitCanvas.renderWires();
+      }, 50);
+    }
+
+    // Export helpers for Schematic View & BOM View
+    function exportSchematicPdf() {
+      if (window.CircuitSchematic) {
+        CircuitSchematic.downloadPdf();
+      }
+    }
+
+    function exportSchematicSvg() {
+      if (window.CircuitSchematic) {
+        CircuitSchematic.downloadSvg('schematic.svg');
+      }
+    }
+
+    function exportBomCsv() {
+      if (window.CircuitSchematic && window.circuitCanvas && circuitCanvas.netlist) {
+        CircuitSchematic.exportCsv(circuitCanvas.netlist, 'components.csv');
+      }
+    }
+
+    // Draggable Splitter Implementation
+    function initSplitter() {
+      const splitter = document.getElementById('mainSplitter');
+      const circuitPane = document.getElementById('circuitPane');
+      const codePane = document.getElementById('codePane');
+      const container = document.getElementById('workbenchContainer');
+
+      let isDragging = false;
+
+      splitter.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        splitter.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const containerRect = container.getBoundingClientRect();
+        const offsetX = e.clientX - containerRect.left;
+        let leftPercent = (offsetX / containerRect.width) * 100;
+
+        if (leftPercent < 15) leftPercent = 15;
+        if (leftPercent > 85) leftPercent = 85;
+
+        circuitPane.style.flex = leftPercent;
+        codePane.style.flex = 100 - leftPercent;
+
+        const ws = ArduinoBlockly.getWorkspace();
+        if (ws) Blockly.svgResize(ws);
+        if (circuitCanvas) circuitCanvas.renderWires();
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          splitter.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+        }
+      });
+
+      // Double click splitter to reset to 50/50
+      splitter.addEventListener('dblclick', () => {
+        circuitPane.style.flex = 50;
+        codePane.style.flex = 50;
+        const ws = ArduinoBlockly.getWorkspace();
+        if (ws) Blockly.svgResize(ws);
+        if (circuitCanvas) circuitCanvas.renderWires();
+      });
+    }
+
+    // Tab Switching
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      const targetPane = document.getElementById(tabId);
+      if (targetPane) targetPane.classList.add('active');
+      if (btn) btn.classList.add('active');
+
+      const codeActions = document.getElementById('codeTabActions');
+      if (codeActions) {
+        codeActions.style.display = (tabId === 'codeTab') ? 'flex' : 'none';
+      }
+
+      if (tabId === 'refTab') {
+        renderRefSheet();
+      }
+    }
+
+    // Comprehensive Diagram Reference Catalog
+    const DIAGRAM_REFERENCES = [
+      {
+        type: 'board-bmp180',
+        name: 'BMP180 Barometric Pressure & Temperature Sensor',
+        desc: 'I2C Barometric pressure and temperature sensor compatible with BMP085.',
+        category: 'Sensors',
+        pins: [
+          { name: 'VCC', desc: 'Voltage supply (5V or 3.3V)' },
+          { name: '3.3V', desc: '3.3V supply output' },
+          { name: 'GND', desc: 'Ground' },
+          { name: 'SCL', desc: 'I2C clock line (Uno A5)' },
+          { name: 'SDA', desc: 'I2C data line (Uno A4)' }
+        ],
+        ranges: 'Temp: -40°C to 85°C | Pressure: 30000 Pa to 110000 Pa (default 101325 Pa / 1 atm)',
+        sampleId: 'bmp180'
+      },
+      {
+        type: 'board-mfrc522',
+        name: 'MFRC522 RFID / NFC Reader',
+        desc: 'SPI 13.56 MHz RFID/NFC card reader for MIFARE Classic and Ultralight tags.',
+        category: 'Sensors',
+        pins: [
+          { name: '3.3V', desc: 'Power supply (3.3V only)' },
+          { name: 'RST', desc: 'Reset pin (active low)' },
+          { name: 'GND', desc: 'Ground' },
+          { name: 'IRQ', desc: 'Interrupt request' },
+          { name: 'MISO', desc: 'SPI Data Out (Uno 12)' },
+          { name: 'MOSI', desc: 'SPI Data In (Uno 11)' },
+          { name: 'SCK', desc: 'SPI Clock (Uno 13)' },
+          { name: 'SDA', desc: 'SPI Chip Select (Uno 10)' }
+        ],
+        ranges: 'Presets: Blue (01:02:03:04), Green (11:22:33:44), Yellow (55:66:77:88), Red (AA:BB:CC:DD), NFC (04:11:22:33:44:55:66), Key Fob (C0:FF:EE:99)',
+        sampleId: 'mfrc522'
+      },
+      {
+        type: 'board-franzininho-wifi',
+        name: 'ESP32 Franzininho WiFi',
+        desc: 'Open source ESP32-S2 development board with built-in LEDs and WiFi.',
+        category: 'Microcontrollers',
+        pins: [
+          { name: 'LED Power', desc: 'Green power indicator' },
+          { name: 'Pin 33', desc: 'Orange user LED' },
+          { name: 'Pin 21', desc: 'Blue user LED' }
+        ],
+        ranges: 'ESP32-S2 Xtensa single-core 240MHz with 802.11 b/g/n WiFi',
+        sampleId: 'franzininho'
+      },
+      {
+        type: 'board-grove-oled-sh1107',
+        name: 'Grove OLED Display (SH1107)',
+        desc: '128x128 monochrome graphic OLED display with I2C interface.',
+        category: 'Displays',
+        pins: [
+          { name: 'SCL', desc: 'I2C Clock' },
+          { name: 'SDA', desc: 'I2C Data' },
+          { name: 'VCC', desc: '3.3V - 5V Power' },
+          { name: 'GND', desc: 'Ground' }
+        ],
+        ranges: '128x128 pixels, I2C Address 0x3C / 0x3D',
+        sampleId: 'grove_oled'
+      },
+      {
+        type: 'board-ssd1306',
+        name: 'SSD1306 128x64 OLED Display (board-ssd1306 / wokwi-ssd1306)',
+        desc: 'Monochrome 0.96" OLED display driven by SSD1306 controller over I2C.',
+        category: 'Displays',
+        pins: [
+          { name: 'GND', desc: 'Ground' },
+          { name: 'VCC', desc: 'Power supply (3.3V - 5V)' },
+          { name: 'SCL', desc: 'I2C Clock (Uno A5)' },
+          { name: 'SDA', desc: 'I2C Data (Uno A4)' }
+        ],
+        ranges: '128x64 pixels, monochrome white/blue (Address 0x3C / 0x3D)'
+      },
+      {
+        type: 'wokwi-arduino-uno',
+        name: 'Arduino Uno R3',
+        desc: 'Classic ATmega328P microcontroller board with 14 digital and 6 analog pins.',
+        category: 'Microcontrollers',
+        pins: [
+          { name: 'D0-D13', desc: '14 Digital IO pins (PWM on 3, 5, 6, 9, 10, 11)' },
+          { name: 'A0-A5', desc: '6 Analog inputs (10-bit ADC, 0-1023)' },
+          { name: '5V, 3.3V, VIN', desc: 'Power rails' }
+        ],
+        sampleId: 'blink'
+      },
+      {
+        type: 'wokwi-arduino-nano',
+        name: 'Arduino Nano',
+        desc: 'Breadboard-friendly ATmega328P board with 8 analog inputs (A0-A7).',
+        category: 'Microcontrollers',
+        pins: [
+          { name: 'D0-D13', desc: 'Digital pins' },
+          { name: 'A0-A7', desc: '8 Analog pins' }
+        ]
+      },
+      {
+        type: 'wokwi-arduino-mega',
+        name: 'Arduino Mega 2560',
+        desc: 'High IO board with 54 digital IO pins and 16 analog inputs.',
+        category: 'Microcontrollers'
+      },
+      {
+        type: 'wokwi-pi-pico',
+        name: 'Raspberry Pi Pico',
+        desc: 'RP2040 Dual ARM Cortex-M0+ 133MHz development board.',
+        category: 'Microcontrollers'
+      },
+      {
+        type: 'board-stm32-bluepill',
+        name: 'STM32 Blue Pill (STM32F103C8T6)',
+        desc: 'ARM Cortex-M3 72MHz 32-bit microcontroller board.',
+        category: 'Microcontrollers'
+      },
+      {
+        type: 'board-st-nucleo-c031c6',
+        name: 'ST Nucleo C031C6',
+        desc: 'STM32C0 series ARM Cortex-M0+ development board.',
+        category: 'Microcontrollers'
+      },
+      {
+        type: 'board-st-nucleo-l031k6',
+        name: 'ST Nucleo L031K6',
+        desc: 'Ultra-low-power STM32L0 ARM Cortex-M0+ board.',
+        category: 'Microcontrollers'
+      },
+      {
+        type: 'wokwi-attiny85',
+        name: 'ATtiny85 Microcontroller',
+        desc: '8-pin low-power AVR 8-bit microcontroller with 8KB flash.',
+        category: 'Microcontrollers'
+      },
+      {
+        type: 'wokwi-hc-sr04',
+        name: 'HC-SR04 Ultrasonic Sensor',
+        desc: 'Measures non-contact distance from 2cm to 400cm with 3mm precision.',
+        category: 'Sensors',
+        pins: [
+          { name: 'VCC', desc: '5V Power' },
+          { name: 'TRIG', desc: '10µs Trigger pulse input' },
+          { name: 'ECHO', desc: 'Echo pulse output proportional to distance' },
+          { name: 'GND', desc: 'Ground' }
+        ],
+        sampleId: 'sonar'
+      },
+      {
+        type: 'wokwi-dht22',
+        name: 'DHT22 Temperature & Humidity Sensor',
+        desc: 'Digital capacitive sensor for calibrated relative humidity and temperature.',
+        category: 'Sensors',
+        pins: [
+          { name: 'VCC', desc: '3.3V - 5.5V' },
+          { name: 'SDA', desc: 'Single-wire bidirectional data' },
+          { name: 'NC', desc: 'Not connected' },
+          { name: 'GND', desc: 'Ground' }
+        ],
+        ranges: 'Temp: -40 to 80°C (±0.5°C) | Humidity: 0-100% RH (±2%)',
+        sampleId: 'dht22'
+      },
+      {
+        type: 'wokwi-ds18b20',
+        name: 'DS18B20 1-Wire Digital Thermometer',
+        desc: 'Programmable 9-12 bit 1-wire digital temperature sensor.',
+        category: 'Sensors',
+        pins: [
+          { name: 'GND', desc: 'Ground' },
+          { name: 'DQ', desc: '1-Wire Data bus' },
+          { name: 'VDD', desc: 'Power supply (3.0V - 5.5V)' }
+        ]
+      },
+      {
+        type: 'wokwi-pir-motion-sensor',
+        name: 'PIR Motion Sensor',
+        desc: 'Passive Infrared sensor with digital output detecting human body heat.',
+        category: 'Sensors',
+        pins: [
+          { name: 'VCC', desc: '5V' },
+          { name: 'OUT', desc: 'Digital High on motion' },
+          { name: 'GND', desc: 'Ground' }
+        ],
+        sampleId: 'pir_alarm'
+      },
+      {
+        type: 'wokwi-photoresistor-sensor',
+        name: 'Photoresistor (LDR) Sensor',
+        desc: 'Light Dependent Resistor with analog and digital threshold outputs.',
+        category: 'Sensors'
+      },
+      {
+        type: 'wokwi-gas-sensor',
+        name: 'MQ-2 Gas Sensor',
+        desc: 'Combustible gas detector sensitive to LPG, smoke, methane, butane.',
+        category: 'Sensors'
+      },
+      {
+        type: 'wokwi-ntc-temperature-sensor',
+        name: 'NTC Thermistor Temperature Sensor',
+        desc: 'Negative temperature coefficient analog resistance sensor.',
+        category: 'Sensors'
+      },
+      {
+        type: 'wokwi-ds1307',
+        name: 'DS1307 Real-Time Clock (RTC)',
+        desc: 'I2C clock/calendar tracking seconds, minutes, hours, day, date, month, and year.',
+        category: 'Sensors'
+      },
+      {
+        type: 'wokwi-mpu6050',
+        name: 'MPU6050 6-Axis Accel & Gyro',
+        desc: 'Integrated 3-axis MEMS accelerometer + 3-axis gyroscope with I2C.',
+        category: 'Sensors'
+      },
+      {
+        type: 'wokwi-hx711',
+        name: 'HX711 24-Bit Load Cell ADC',
+        desc: 'Precision 24-bit analog-to-digital converter for weigh scales and strain gauges.',
+        category: 'Sensors'
+      },
+      {
+        type: 'wokwi-flame-sensor',
+        name: 'Flame Sensor',
+        desc: 'IR flame sensor sensitive to wavelengths from 760nm to 1100nm.',
+        category: 'Sensors'
+      },
+      {
+        type: 'wokwi-ir-receiver',
+        name: 'IR Receiver (TSOP4838)',
+        desc: '38 kHz Infrared receiver for remote control demodulation.',
+        category: 'Sensors'
+      },
+      {
+        type: 'wokwi-ir-remote',
+        name: 'IR Remote Controller',
+        desc: '21-button NEC protocol infrared remote transmitter.',
+        category: 'Inputs'
+      },
+      {
+        type: 'wokwi-servo',
+        name: 'Standard Servo Motor',
+        desc: 'Positional servo motor controlled by 50Hz PWM pulse width.',
+        category: 'Actuators',
+        sampleId: 'servo'
+      },
+      {
+        type: 'wokwi-stepper-motor',
+        name: 'Stepper Motor',
+        desc: 'Precise 200 steps/revolution 4-wire bipolar stepper motor.',
+        category: 'Actuators'
+      },
+      {
+        type: 'wokwi-a4988',
+        name: 'A4988 Stepper Motor Driver',
+        desc: 'Microstepping driver with translator for bipolar stepper motors.',
+        category: 'Actuators'
+      },
+      {
+        type: 'wokwi-buzzer',
+        name: 'Piezo Buzzer',
+        desc: 'Electromagnetic audio sounder for frequencies 100Hz to 10kHz.',
+        category: 'Outputs'
+      },
+      {
+        type: 'wokwi-led',
+        name: 'Standard LED',
+        desc: '5mm Through-hole LED available in Red, Green, Blue, Yellow, White.',
+        category: 'Outputs'
+      },
+      {
+        type: 'wokwi-rgb-led',
+        name: 'RGB LED',
+        desc: 'Common cathode or common anode multi-color LED.',
+        category: 'Outputs'
+      },
+      {
+        type: 'wokwi-led-bar-graph',
+        name: '10-Segment LED Bar Graph',
+        desc: 'Array of 10 individual LEDs for audio meters and battery indicators.',
+        category: 'Outputs'
+      },
+      {
+        type: 'wokwi-led-ring',
+        name: 'NeoPixel LED Ring',
+        desc: 'Circular array of WS2812B addressable RGB LEDs (12, 16, or 24 pixels).',
+        category: 'Outputs',
+        pins: [
+          { name: 'VCC', desc: '5V Power supply' },
+          { name: 'GND', desc: 'Ground' },
+          { name: 'DIN', desc: 'Data In (from Uno Pin 6)' },
+          { name: 'DOUT', desc: 'Data Out (chain to next NeoPixel)' }
+        ],
+        ranges: '16.7M colors, 800 kHz data speed, 5V operating voltage',
+        sampleId: 'neopixel_ring'
+      },
+      {
+        type: 'wokwi-neopixel',
+        name: 'Single NeoPixel RGB LED',
+        desc: 'WS2812B addressable single RGB LED breakout with integrated driver.',
+        category: 'Outputs',
+        pins: [
+          { name: 'VCC', desc: '5V Power' },
+          { name: 'GND', desc: 'Ground' },
+          { name: 'DIN', desc: 'Data In' },
+          { name: 'DOUT', desc: 'Data Out' }
+        ]
+      },
+      {
+        type: 'wokwi-neopixel-matrix',
+        name: 'NeoPixel 8x8 Matrix Panel',
+        desc: '64 individually addressable RGB LEDs arranged in an 8x8 matrix grid.',
+        category: 'Displays',
+        pins: [
+          { name: 'VCC', desc: '5V Power' },
+          { name: 'GND', desc: 'Ground' },
+          { name: 'DIN', desc: 'Data In' },
+          { name: 'DOUT', desc: 'Data Out' }
+        ]
+      },
+      {
+        type: 'wokwi-led-strip',
+        name: 'NeoPixel LED Strip',
+        desc: 'Chain of addressable WS2812B RGB LEDs.',
+        category: 'Outputs'
+      },
+      {
+        type: 'wokwi-lcd1602',
+        name: '16x2 Character LCD',
+        desc: 'HD44780 standard parallel or I2C alphanumeric display.',
+        category: 'Displays'
+      },
+      {
+        type: 'wokwi-lcd2004',
+        name: '20x4 Character LCD',
+        desc: '4-line 20-character alphanumeric LCD display.',
+        category: 'Displays'
+      },
+      {
+        type: 'wokwi-7segment',
+        name: '7-Segment Numeric Display',
+        desc: 'Single digit 7-segment LED readout with decimal point.',
+        category: 'Displays'
+      },
+      {
+        type: 'wokwi-tm1637-7segment',
+        name: 'TM1637 4-Digit 7-Segment Display',
+        desc: '4-digit clock display with colon and 2-wire serial interface.',
+        category: 'Displays'
+      },
+      {
+        type: 'wokwi-max7219-matrix',
+        name: 'MAX7219 8x8 LED Matrix',
+        desc: 'SPI driven 8x8 dot matrix display module.',
+        category: 'Displays'
+      },
+      {
+        type: 'wokwi-pushbutton',
+        name: 'Tactile Pushbutton',
+        desc: '12mm Momentary push-to-make tactile button.',
+        category: 'Inputs'
+      },
+      {
+        type: 'wokwi-potentiometer',
+        name: 'Rotary Potentiometer',
+        desc: 'Adjustable voltage divider delivering 0V to 5V (0 to 1023 ADC).',
+        category: 'Inputs',
+        sampleId: 'pot_dimmer'
+      },
+      {
+        type: 'wokwi-analog-joystick',
+        name: '2-Axis Analog Joystick',
+        desc: 'Dual potentiometers (X and Y) with integrated push button.',
+        category: 'Inputs'
+      },
+      {
+        type: 'wokwi-ky-040',
+        name: 'KY-040 Rotary Encoder',
+        desc: 'Rotary quadrature digital encoder with push switch.',
+        category: 'Inputs'
+      },
+      {
+        type: 'wokwi-slide-switch',
+        name: 'SPDT Slide Switch',
+        desc: 'Single pole double throw mechanical slide toggle.',
+        category: 'Inputs'
+      },
+      {
+        type: 'wokwi-dip-switch-8',
+        name: '8-Position DIP Switch',
+        desc: 'Array of 8 individual miniature on/off slide switches.',
+        category: 'Inputs'
+      },
+      {
+        type: 'wokwi-membrane-keypad',
+        name: '4x4 Matrix Keypad',
+        desc: '16-button matrix keypad for numeric and password entry.',
+        category: 'Inputs'
+      },
+      {
+        type: 'wokwi-relay-module',
+        name: 'Relay Module (5V)',
+        desc: 'Optocoupled 5V relay for controlling AC/DC high power loads safely.',
+        category: 'Actuators',
+        pins: [
+          { name: 'VCC', desc: '5V Power supply' },
+          { name: 'IN', desc: 'Trigger input signal (Uno Pin 8)' },
+          { name: 'GND', desc: 'Ground' },
+          { name: 'NO', desc: 'Normally Open terminal' },
+          { name: 'COM', desc: 'Common switch terminal' },
+          { name: 'NC', desc: 'Normally Closed terminal' }
+        ],
+        ranges: 'Max Load: AC 250V/10A, DC 30V/10A. Trigger Current: 5mA.',
+        sampleId: 'relay_module'
+      },
+      {
+        type: 'wokwi-resistor',
+        name: 'Carbon Film Resistor',
+        desc: 'Through-hole resistor (default 220Ω for LEDs, 10kΩ pull-ups).',
+        category: 'Passives'
+      },
+      {
+        type: 'wokwi-74hc165',
+        name: '74HC165 8-Bit Parallel-In Shift Register',
+        desc: 'Parallel-in, serial-out 8-bit shift register for input pin expansion.',
+        category: 'Logic',
+        pins: [
+          { name: 'D0-D7', desc: '8 Parallel input pins' },
+          { name: 'PL', desc: 'Parallel load (active low)' },
+          { name: 'CP', desc: 'Serial clock' },
+          { name: 'CE', desc: 'Clock enable (active low, connect GND)' },
+          { name: 'Q7', desc: 'Serial data output' },
+          { name: 'DS', desc: 'Serial data input for daisy-chaining' }
+        ]
+      },
+      {
+        type: 'wokwi-74hc595',
+        name: '74HC595 8-Bit Serial-In Shift Register',
+        desc: 'Serial-in, parallel-out 8-bit shift register with 3-state outputs.',
+        category: 'Logic',
+        pins: [
+          { name: 'DS', desc: 'Serial data input' },
+          { name: 'SHCP', desc: 'Shift register clock' },
+          { name: 'STCP', desc: 'Storage register clock (latch)' },
+          { name: 'OE', desc: 'Output enable (active low)' },
+          { name: 'Q0-Q7', desc: '8 Parallel output pins' },
+          { name: 'Q7S', desc: 'Serial data output for chaining' }
+        ]
+      },
+      {
+        type: 'ks2e-m-dc5',
+        name: 'KS2E-M-DC5 DPDT Relay',
+        desc: 'Double Pole Double Throw (DPDT) electromechanical relay.',
+        category: 'Actuators',
+        pins: [
+          { name: 'COIL1, COIL2', desc: 'Relay coil excitation terminals' },
+          { name: 'P1, P2', desc: 'Common poles 1 and 2' },
+          { name: 'NC1, NC2', desc: 'Normally closed contacts' },
+          { name: 'NO1, NO2', desc: 'Normally open contacts' }
+        ]
+      },
+      {
+        type: 'wokwi-biaxial-stepper',
+        name: 'Biaxial Stepper Motor',
+        desc: 'Concentric dual stepper motor with independent inner and outer hands.',
+        category: 'Actuators',
+        pins: [
+          { name: 'A1-, A1+, B1+, B1-', desc: 'Outer shaft motor coils' },
+          { name: 'A2-, A2+, B2+, B2-', desc: 'Inner shaft motor coils' }
+        ]
+      },
+      {
+        type: 'wokwi-clock-generator',
+        name: 'Clock Generator',
+        desc: 'Configurable digital square wave frequency source (1Hz to 100kHz).',
+        category: 'Tools',
+        pins: [
+          { name: 'CLK', desc: 'Clock signal output' }
+        ]
+      },
+      {
+        type: 'wokwi-franzininho',
+        name: 'Franzininho DIY (ATtiny85)',
+        desc: 'Open-source Brazilian ATtiny85 development board with onboard Yellow LED (PB1).',
+        category: 'Microcontrollers',
+        pins: [
+          { name: '0-5', desc: 'ATtiny85 GPIO pins (PB0-PB5)' },
+          { name: 'LED1', desc: 'Yellow user LED connected to PB1' },
+          { name: 'ON', desc: 'Green power indicator' }
+        ]
+      },
+      {
+        type: 'wokwi-ili9341',
+        name: 'ILI9341 2.8" Color TFT LCD',
+        desc: '240x320 pixel full-color graphic display with SPI interface.',
+        category: 'Displays',
+        pins: [
+          { name: 'VCC, GND', desc: 'Power supply (5V / GND)' },
+          { name: 'CS', desc: 'SPI Chip Select (Pin 10)' },
+          { name: 'D/C', desc: 'Data / Command select (Pin 9)' },
+          { name: 'MOSI, SCK, MISO', desc: 'Hardware SPI bus pins (11, 13, 12)' }
+        ]
+      },
+      {
+        type: 'wokwi-microsd-card',
+        name: 'MicroSD Card Module',
+        desc: 'SPI microSD card socket with FAT16 file system simulation.',
+        category: 'Tools',
+        pins: [
+          { name: 'CS', desc: 'SPI Chip Select (Pin 10)' },
+          { name: 'DI', desc: 'SPI MOSI (Pin 11)' },
+          { name: 'DO', desc: 'SPI MISO (Pin 12)' },
+          { name: 'SCK', desc: 'SPI Clock (Pin 13)' },
+          { name: 'VCC, GND', desc: 'Power supply' }
+        ]
+      },
+      {
+        type: 'wokwi-nlsf595',
+        name: 'NLSF595 Serial RGB LED Driver',
+        desc: 'Serial SPI shift register driver for multi-color common-anode LEDs.',
+        category: 'Logic',
+        pins: [
+          { name: 'SI, SCK, RCK', desc: 'Serial Data, Clock, and Latch' },
+          { name: 'QA-QH', desc: '8 Constant-current sink outputs' }
+        ]
+      },
+      {
+        type: 'wokwi-nokia-5110-screen',
+        name: 'Nokia 5110 Screen',
+        desc: '84x48 monochrome graphic LCD screen with PCD8544 controller.',
+        category: 'Displays',
+        pins: [
+          { name: 'RST, CE, DC', desc: 'Reset, Chip Enable, and Data/Command' },
+          { name: 'DIN, CLK', desc: 'Serial Data and Clock' },
+          { name: 'VCC, BL, GND', desc: 'Power and Backlight control' }
+        ]
+      },
+      {
+        type: 'wokwi-pushbutton-6mm',
+        name: 'Tactile Pushbutton 6mm',
+        desc: 'Compact 6mm miniature momentary push switch.',
+        category: 'Inputs'
+      },
+      {
+        type: 'wokwi-slide-potentiometer',
+        name: 'Slide Potentiometer',
+        desc: 'Linear travel variable resistor (0 to 1023 ADC output).',
+        category: 'Inputs',
+        pins: [
+          { name: 'VCC', desc: 'Positive supply (5V)' },
+          { name: 'SIG', desc: 'Analog wiper output' },
+          { name: 'GND', desc: 'Ground' }
+        ]
+      },
+      {
+        type: 'wokwi-wifi-ap',
+        name: 'WiFi Access Point',
+        desc: 'Simulated 2.4 GHz 802.11 b/g/n WiFi access point for ESP32 networking.',
+        category: 'Tools',
+        ranges: 'Custom SSID, WPA2-PSK password, channel (1-13), IoT gateway internet routing'
+      },
+      {
+        type: 'wokwi-logic-analyzer',
+        name: '8-Channel Logic Analyzer',
+        desc: 'Records digital signals to VCD format for PulseView inspection.',
+        category: 'Tools'
+      }
+    ];
+
+    function renderRefSheet(filterQuery = '') {
+      const container = document.getElementById('refSheetContent');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const q = (filterQuery || '').toLowerCase();
+      const filtered = DIAGRAM_REFERENCES.filter(item => {
+        return !q ||
+          item.name.toLowerCase().includes(q) ||
+          item.type.toLowerCase().includes(q) ||
+          item.desc.toLowerCase().includes(q) ||
+          (item.category && item.category.toLowerCase().includes(q));
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:0.85rem;">No matching reference components found.</div>';
+        return;
+      }
+
+      // Group by category
+      const categories = [
+        { key: 'Sensors', label: '🌡️ Sensors & Transducers', open: true },
+        { key: 'Microcontrollers', label: '⚡ Microcontrollers & Development Boards', open: false },
+        { key: 'Displays', label: '📺 Displays & Indicators', open: false },
+        { key: 'Actuators', label: '⚙️ Actuators & Motors', open: false },
+        { key: 'Outputs', label: '💡 LEDs & Audio Outputs', open: false },
+        { key: 'Inputs', label: '🎮 Switches & Input Controls', open: false },
+        { key: 'Passives', label: '🔌 Passive Components', open: false },
+        { key: 'Logic', label: '🔣 Logic ICs & Shift Registers', open: false },
+        { key: 'Tools', label: '🔬 Debug Tools & Analyzers', open: false }
+      ];
+
+      categories.forEach(cat => {
+        const items = filtered.filter(i => (i.category || 'Other').toLowerCase() === cat.key.toLowerCase());
+        if (items.length === 0) return;
+
+        const details = document.createElement('details');
+        details.className = 'ref-accordion';
+        // Auto-open if searching or if default category
+        if (q || cat.open) details.open = true;
+
+        const summary = document.createElement('summary');
+        summary.innerHTML = `${cat.label} <span class="badge" style="font-size:0.68rem; margin-left:6px;">${items.length}</span>`;
+        details.appendChild(summary);
+
+        const content = document.createElement('div');
+        content.className = 'ref-accordion-content';
+
+        items.forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'ref-item-card';
+
+          let pinsHtml = '';
+          if (item.pins && item.pins.length > 0) {
+            pinsHtml = `
+              <table class="ref-table">
+                <thead><tr><th>Pin</th><th>Description</th></tr></thead>
+                <tbody>
+                  ${item.pins.map(p => `<tr><td><code>${p.name}</code></td><td>${p.desc}</td></tr>`).join('')}
+                </tbody>
+              </table>
+            `;
+          }
+
+          let rangesHtml = item.ranges ? `<div style="font-size:0.72rem; color:#475569; margin-top:4px;"><strong>Ranges / Presets:</strong> ${item.ranges}</div>` : '';
+
+          card.innerHTML = `
+            <div class="ref-item-header">
+              <span class="ref-item-title">${item.name}</span>
+              <span class="ref-item-type">&lt;${item.type}&gt;</span>
+            </div>
+            <div class="ref-item-desc">${item.desc}</div>
+            ${rangesHtml}
+            ${pinsHtml}
+            <div class="ref-actions">
+              <button class="btn btn-primary btn-sm" onclick="circuitCanvas.addComponent('${item.type}', 250, 120)">&#x2795; Add to Circuit</button>
+              ${item.sampleId ? `<button class="btn btn-secondary btn-sm" onclick="loadSampleProject('${item.sampleId}')">&#x1F4C4; Load Sample Code</button>` : ''}
+            </div>
+          `;
+          content.appendChild(card);
+        });
+
+        details.appendChild(content);
+        container.appendChild(details);
+      });
+    }
+
+    function filterRefSheet(query) {
+      renderRefSheet(query);
+    }
+  </script>
+</body>
+</html>
