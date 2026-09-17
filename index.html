@@ -6,8 +6,8 @@
   <title>IrieBlocky - Interactive Arduino Blockly & Wokwi Workbench</title>
   
   <!-- External Dependencies -->
-  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-  <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
+  <script src="https://unpkg.com/blockly@13.3.0/blockly.min.js"></script>
+  <script src="https://unpkg.com/blockly@13.3.0/javascript_compressed.js"></script>
   <script src="https://unpkg.com/arduino-moving-average@1.0.0/MovingAverage.min.js"></script>
   <script src="https://unpkg.com/@wokwi/elements@1.9.2/dist/wokwi-elements.bundle.js"></script>
   
@@ -673,6 +673,18 @@
   <script>
     let circuitCanvas = null;
 
+    // ── Embed Mode ──────────────────────────────────────────────────
+    // Lets a host page (e.g. an <iframe> in another app) drop IrieBlocky in
+    // with its own chrome hidden and a specific starter project preloaded:
+    //   /index.html?embed=1&example=blink
+    const IrieBlockyEmbed = (function () {
+      const params = new URLSearchParams(window.location.search);
+      const active = params.get('embed') === '1';
+      if (active) document.documentElement.classList.add('embed-mode');
+      return { active, exampleId: params.get('example') || null };
+    })();
+    window.IrieBlockyEmbed = IrieBlockyEmbed;
+
     // Initialize Circuit Canvas once DOM loads
     document.addEventListener('DOMContentLoaded', () => {
       circuitCanvas = new CircuitCanvas('circuitBoard', 'wireSvg');
@@ -681,7 +693,7 @@
       initSplitter();
 
       // Link simulation engine
-      if (window.ArduinoBlockly && ArduinoBlockly.getSimulationEngine) {
+      if (typeof ArduinoBlockly !== 'undefined' && ArduinoBlockly.getSimulationEngine) {
         const engine = ArduinoBlockly.getSimulationEngine();
         if (engine) engine.setCircuit(circuitCanvas);
       }
@@ -706,6 +718,20 @@
       // 4. Diagram Importer / Exporter
       if (window.DiagramImporterExporter) {
         window.diagramIO = new DiagramImporterExporter(circuitCanvas);
+      }
+
+      // 5. Embed mode: preload the requested starter project, if any
+      if (IrieBlockyEmbed.exampleId && typeof ArduinoBlockly !== 'undefined' && typeof ArduinoBlockly.loadSampleProject === 'function') {
+        try {
+          ArduinoBlockly.loadSampleProject(IrieBlockyEmbed.exampleId);
+        } catch (e) {
+          console.error('IrieBlocky: failed to preload example project "' + IrieBlockyEmbed.exampleId + '"', e);
+        }
+      }
+
+      // Let a hosting page know we're ready (harmless no-op if not embedded)
+      if (window.parent && window.parent !== window) {
+        try { window.parent.postMessage({ source: 'irieblocky', type: 'ready' }, '*'); } catch (e) {}
       }
     });
 

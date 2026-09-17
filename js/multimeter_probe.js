@@ -144,7 +144,7 @@ class MultimeterProbe {
   }
 
   readElectricalState(compId, pinName, wireId) {
-    const engine = window.ArduinoBlockly ? ArduinoBlockly.getSimulationEngine() : null;
+    const engine = typeof ArduinoBlockly !== 'undefined' ? ArduinoBlockly.getSimulationEngine() : null;
     const isRunning = engine && engine.running;
 
     let nodeLabel = 'Unknown Pin';

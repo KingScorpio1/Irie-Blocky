@@ -2170,7 +2170,7 @@ class CircuitCanvas {
   }
 
   showToast(msg, type = 'info') {
-    if (window.ArduinoBlockly && ArduinoBlockly.showStatus) {
+    if (typeof ArduinoBlockly !== 'undefined' && ArduinoBlockly.showStatus) {
       ArduinoBlockly.showStatus(msg, type);
     }
   }

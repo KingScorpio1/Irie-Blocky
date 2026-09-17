@@ -222,18 +222,27 @@ class DiagramImporterExporter {
     }
   }
 
+  // Escapes text pulled from imported diagram.json / netlist data before it is
+  // ever interpolated into an HTML string (BOM rows, lab report, etc.)
+  static escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+  }
+
   // Generates complete engineering Lab Report (PDF / Print)
   generateLabReport() {
-    const code = window.ArduinoBlockly ? ArduinoBlockly.generateCode() : '// No code generated';
+    const code = typeof ArduinoBlockly !== 'undefined' ? ArduinoBlockly.generateCode() : '// No code generated';
     const bomItems = window.CircuitSchematic && this.canvas?.netlist
       ? CircuitSchematic.generateBom(this.canvas.netlist)
       : [];
 
+    const esc = DiagramImporterExporter.escapeHtml;
     let bomRows = bomItems.map(item => `
       <tr>
-        <td style="padding:6px 10px; border:1px solid #cbd5e1; font-weight:700;">${item.name}</td>
-        <td style="padding:6px 10px; border:1px solid #cbd5e1; text-align:center;">${item.quantity}</td>
-        <td style="padding:6px 10px; border:1px solid #cbd5e1;">${item.component}</td>
+        <td style="padding:6px 10px; border:1px solid #cbd5e1; font-weight:700;">${esc(item.name)}</td>
+        <td style="padding:6px 10px; border:1px solid #cbd5e1; text-align:center;">${esc(item.quantity)}</td>
+        <td style="padding:6px 10px; border:1px solid #cbd5e1;">${esc(item.component)}</td>
       </tr>
     `).join('');
 

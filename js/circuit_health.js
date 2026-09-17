@@ -110,7 +110,7 @@ class CircuitHealthChecker {
         });
 
         // Trigger sound effect if simulated
-        if (window.soundEngine && window.ArduinoBlockly?.getSimulationEngine()?.running) {
+        if (window.soundEngine && typeof ArduinoBlockly !== 'undefined' && ArduinoBlockly.getSimulationEngine()?.running) {
           window.soundEngine.playBurnPop();
         }
       }

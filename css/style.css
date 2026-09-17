@@ -23,8 +23,8 @@
 }
 
 html, body {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color: var(--text);
@@ -38,7 +38,7 @@ html, body {
    ========================================= */
 .navbar {
   height: 50px;
-  width: 100vw;
+  width: 100%;
   background: #ffffff;
   border-bottom: 1px solid var(--border-light);
   display: flex;
@@ -84,6 +84,16 @@ html, body {
   background: var(--primary-light);
   padding: 2px 7px;
   border-radius: 10px;
+}
+
+/* Embed Mode: hide chrome that's redundant once a host page (e.g. a lesson
+   iframe) already shows its own title/branding above the workbench. */
+.embed-mode .brand-subtitle,
+.embed-mode .brand-title {
+  display: none;
+}
+.embed-mode .navbar {
+  padding: 0 0.6rem;
 }
 
 /* Mode View Switcher (Tinkercad / Wokwi style) */
